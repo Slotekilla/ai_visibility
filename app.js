@@ -1,0 +1,20 @@
+(()=>{const form=document.querySelector('#form');if(!form)return;let step=0;const steps=[...document.querySelectorAll('.step')],titles=['Najprej razumemo vaše podjetje.','Kje želite biti najdeni?','Koga morate premagati?','Kam pošljemo rezultat?'];const header=document.querySelector('#stepHeader'),label=document.querySelector('#stepLabel'),question=document.querySelector('#question'),progress=document.querySelector('#progress'),back=document.querySelector('#back'),next=document.querySelector('#next'),submit=document.querySelector('#submit'),err=document.querySelector('#error'),loading=document.querySelector('#loading'),result=document.querySelector('#result');
+const band=s=>s<30?'Kritično nizka vidnost':s<50?'Nizka vidnost':s<70?'Neizkoriščen potencial':s<85?'Dobra vidnost':'Zelo močna vidnost';
+
+const marketEl = document.getElementById('market');
+const foreignMarketWrap = document.getElementById('foreignMarketWrap');
+const foreignMarketEl = document.getElementById('foreignMarket');
+
+if (marketEl && foreignMarketWrap) {
+  const syncMarket = () => {
+    const foreign = marketEl.value === 'foreign';
+    foreignMarketWrap.hidden = !foreign;
+    if (foreignMarketEl) foreignMarketEl.required = foreign;
+  };
+  marketEl.addEventListener('change', syncMarket);
+  syncMarket();
+}
+
+function render(){steps.forEach((x,i)=>x.classList.toggle('active',i===step));label.textContent=`Korak ${step+1} / 4`;question.textContent=titles[step];progress.style.width=`${(step+1)*25}%`;back.hidden=step===0;next.hidden=step===3;submit.hidden=step!==3;err.textContent=''}
+function resultHTML(j){const s=j.scores;const rows=[['Tehnična pripravljenost',s.technical.score],['Entity jasnost',s.entity.score],['Vsebina & intent',s.content.score],['Authority & trust',s.authority.score],['AI discoverability',s.discoverability.score]];return `<div class="eyebrow">AXO VISIBILITY REPORT</div><div class="resultHero"><div class="bigScore">${s.total}<span>/100</span></div><div><div class="riskLabel">${band(s.total).toUpperCase()}</div><h1>${j.business.name||'Vaše podjetje'}</h1><p class="heroLead">${j.summary}</p></div></div><div class="signalRows">${rows.map(([n,v])=>`<div><span>${n}</span><i><b style="width:${v}%"></b></i><em>${v}</em></div>`).join('')}</div><div class="resultGrid"><section class="resultPanel"><div class="eyebrow">Najdene vrzeli</div><h2>Kaj trenutno omejuje vidnost</h2>${j.issues.slice(0,6).map(x=>`<div class="issue"><strong>${x.severity}</strong><span>${x.text}</span></div>`).join('')}</section><section class="resultPanel"><div class="eyebrow">Live visibility test</div><h2>Brave Search + AI analiza</h2><p>Vsaka buyer-intent poizvedba je bila preverjena ločeno z Brave Search + AI analiza groundingom. Discoverability score temelji na dejanskih omembah, priporočilih in konkurenci.</p><div class="offerBox"><span>AXO AI Visibility Setup</span><strong>350 €</strong><p>Odpravimo identificirane vrzeli in pripravimo stran za boljšo AI/search vidnost.</p><a class="cta" href="mailto:info@axo-8.com?subject=AI Visibility Setup">Želim izboljšati rezultat →</a></div></section></div>`}
+next.onclick=()=>{const inputs=[...steps[step].querySelectorAll('[required]')];if(inputs.some(i=>!i.value.trim())){err.textContent='Izpolni obvezna polja.';return}step++;render()};back.onclick=()=>{step--;render()};form.onsubmit=async e=>{e.preventDefault();const finalInputs=[...steps[3].querySelectorAll('[required]')];if(finalInputs.some(i=>!i.value.trim())){err.textContent='Izpolni obvezna polja.';return}const fd=new FormData(form);const body=Object.fromEntries(fd.entries());body.competitors=String(body.competitors||'').split(',').map(x=>x.trim()).filter(Boolean);form.hidden=true;header.hidden=true;loading.hidden=false;try{const r=await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Analiza ni uspela.');loading.hidden=true;result.hidden=false;result.innerHTML=resultHTML(j);window.scrollTo({top:0,behavior:'smooth'});}catch(e){form.hidden=false;header.hidden=false;loading.hidden=true;err.textContent=e.message}};render()})();
